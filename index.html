@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>drp 质押管理</title>
+    <!-- 引入 Bootstrap 用于快速布局 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- 引入 Ethers.js V6 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { background-color: #1e293b; border: 1px solid #334155; }
+        .card-title { color: #fff; }
+        .btn-primary { background-color: #3b82f6; border: none; }
+        .btn-primary:hover { background-color: #2563eb; }
+        .btn-success { background-color: #10b981; border: none; }
+        .btn-danger { background-color: #ef4444; border: none; }
+        .btn-warning { background-color: #f59e0b; border: none; color: #fff; }
+        .btn-warning:hover { background-color: #d97706; color: #fff; }
+        .warning-box {
+            background-color: #450a0a;
+            border: 1px solid #ef4444;
+            color: #fca5a5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        .stat-value { font-size: 1.25rem; font-weight: bold; color: #38bdf8; }
+        .stat-label { font-size: 0.85rem; color: #94a3b8; }
+        .table { color: #cbd5e1; }
+        .table thead th { border-bottom: 1px solid #475569; color: #94a3b8; }
+        .table td { border-bottom: 1px solid #334155; vertical-align: middle; }
+        input.form-control { background-color: #334155; border-color: #475569; color: white; }
+        input.form-control:focus { background-color: #334155; color: white; border-color: #38bdf8; box-shadow: none; }
+        
+.align-items-end label.form-label {
+        color: wheat;
+}
+    </style>
+</head>
+<body>
+
+<div class="container py-5">
+    <!-- 特别说明区域 -->
+    <div class="warning-box">
+        <h5 class="text-danger fw-bold">⚠️ 特别说明</h5>
+        <ol class="mb-0">
+            <li>这个资金盘每天日化0.5%，第一天锁仓，后面29天不锁，超过30天没有收益。</li>
+            <li>要崩盘前2天以上，页面会关闭质押功能，并提示解押。</li>
+            <li>提示崩盘可能一周以上才会崩盘，但是别赚最后一分钱。</li>
+            <li>请用一个新的干净钱包来参与。</li>
+        </ol>
+    </div>
+
+    <!-- 钱包连接 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold">drp Staking</h3>
+        <button id="connectBtn" class="btn btn-primary" onclick="connectWallet()">连接钱包</button>
+    </div>
+
+    <!-- 数据统计面板 -->
+    <div class="row mb-4 text-center g-2">
+        <div class="col-6 col-md-3">
+            <div class="card p-3 h-100">
+                <div class="stat-label">我的 USDT 余额</div>
+                <div class="stat-value" id="myBalance">0.0000</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card p-3 h-100">
+                <div class="stat-label">待提现余额 (合约内)</div>
+                <div class="stat-value" id="stakedBalance">0.0000</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card p-3 h-100">
+                <div class="stat-label">可提现 USDT (池子)</div>
+                <div class="stat-value" id="poolBalance">0.0000</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 质押操作区域 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">参与质押</h5>
+            <div class="row g-3 align-items-end">
+                <div class="col-md-8">
+                    <label class="form-label">质押金额 (USDT)</label>
+                    <input type="number" class="form-control" id="stakeAmount" value="1000" placeholder="输入金额">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label d-block">操作</label>
+                    <button class="btn btn-success w-40" id="stakeBtn" onclick="handleStake(0)">
+                        授权并质押（1天）
+                    </button>
+                    <button class="btn btn-success w-40" id="stakeBtn" onclick="handleStake(1)">
+                        授权并质押（15天）
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2 small text-white">
+                * 质押周期为1天。
+            </div>
+        </div>
+    </div>
+
+    <!-- 质押列表 -->
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="card-title mb-0">我的质押记录</h5>
+                <button class="btn btn-sm btn-outline-light" onclick="refreshData()">刷新数据</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>金额 (USDT)</th>
+                            <th>质押时间</th>
+                            <th>状态</th>
+                            <th>操作</th> <!-- 恢复操作列 -->
+                        </tr>
+                    </thead>
+                    <tbody id="stakeListBody">
+                        <tr><td colspan="5" class="text-center">请连接钱包查看数据</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ================= 配置区域 =================
+    const CONFIG = {
+        STAKING: "0x7E1882b471F627Ba75935BCb12105545Eb8b4227",
+        USDT: "0x55d398326f99059fF775485246999027B3197955",
+        PAIR: "0xAB71C14094575C6ec8f2e61C708D5f4A3c3d5ca0",
+        //在此处修改邀请人地址
+        REFERRER: "0xdD59B2B78ac41BD670f0caEbb8b1249e61Cc471C" ，
+        RPC_URL: "https://bsc-dataseed.binance.org/"
+    };
+    // ===========================================
+
+    // ABIs
+    const ABI_ERC20 = [
+        "function balanceOf(address owner) view returns (uint256)",
+        "function decimals() view returns (uint8)",
+        "function approve(address spender, uint256 amount) returns (bool)",
+        "function allowance(address owner, address spender) view returns (uint256)"
+    ];
+
+    const ABI_STAKING = [
+        "function totalSupply() view returns (uint256)",
+        "function balanceOf(address account) view returns (uint256)",
+        "function stakeWithInviter(uint160 _amount, uint256 amountOutMin, uint8 _stakeIndex, address parent)",
+        "function stake(uint160 _amount, uint256 amountOutMin, uint8 _stakeIndex)",
+        "function unstake(uint256 index)", // 必须包含 unstake 方法
+        "function stakeCount(address user) view returns (uint256)",
+        'function maxStakeAmount() view returns (uint256)',
+        "function userStakeRecord(address user, uint256 index) view returns (uint40 stakeTime, uint160 amount, bool status, uint8 stakeIndex)"
+    ];
+
+    // 全局变量
+    let provider, signer, userAddress;
+    let stakingContract, usdtContract;
+
+    // 工具：格式化金额为4位小数
+    function formatAmount(wei) {
+        const val = ethers.formatUnits(wei, 18);
+        return parseFloat(val).toFixed(0);
+    }
+
+    // 1. 连接钱包
+    async function connectWallet() {
+        if (!window.ethereum) {
+            alert("请安装 MetaMask!");
+            return;
+        }
+        try {
+            provider = new ethers.BrowserProvider(window.ethereum);
+            signer = await provider.getSigner();
+            userAddress = await signer.getAddress();
+            
+            // 更新UI
+            document.getElementById('connectBtn').innerText = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
+            document.getElementById('connectBtn').classList.replace('btn-primary', 'btn-success');
+
+            // 初始化合约
+            stakingContract = new ethers.Contract(CONFIG.STAKING, ABI_STAKING, signer);
+            usdtContract = new ethers.Contract(CONFIG.USDT, ABI_ERC20, signer);
+
+            // 加载数据
+            await refreshData();
+        } catch (error) {
+            console.error("连接失败:", error);
+            alert("连接钱包失败");
+        }
+    }
+
+    // 2. 刷新所有数据
+    async function refreshData() {
+        if (!userAddress) return;
+        const btn = document.querySelector('button[onclick="refreshData()"]');
+        const originalText = btn.innerText;
+        btn.innerText = "加载中...";
+        
+        try {
+            // 2.1 获取我的 USDT 余额
+            const myBal = await usdtContract.balanceOf(userAddress);
+            document.getElementById('myBalance').innerText = formatAmount(myBal);
+
+            // 2.2 获取待提现余额 (合约内的 balanceOf)
+            const stakedBal = await stakingContract.balanceOf(userAddress);
+            document.getElementById('stakedBalance').innerText = formatAmount(stakedBal);
+
+            // 2.3 获取可提现余额 (池子里的 USDT)
+            const poolBal = await usdtContract.balanceOf(CONFIG.PAIR);
+            document.getElementById('poolBalance').innerText = formatAmount(poolBal);
+
+
+            // 2.5 获取质押列表
+            await renderStakeList();
+            btn.innerText = "刷新";
+        } catch (error) {
+            console.error("数据加载错误:", error);
+        } finally {
+            btn.innerText = originalText;
+        }
+    }
+
+    // 3. 渲染质押列表
+    async function renderStakeList() {
+        const tbody = document.getElementById('stakeListBody');
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">加载中...</td></tr>';
+
+        try {
+            const count = await stakingContract.stakeCount(userAddress);
+            let html = '';
+            
+            const now = Math.floor(Date.now() / 1000);
+
+            // 倒序显示
+            for (let i = Number(count) - 1; i >= 0; i--) {
+                const record = await stakingContract.userStakeRecord(userAddress, i);
+                
+                const amount = formatAmount(record[1]); 
+                const stakeTime = Number(record[0]);
+                const stakeTimeStr = new Date(stakeTime * 1000).toLocaleString();
+                const isActive = record[2]; 
+                
+                // 计算锁定状态
+                const unlockTime = stakeTime + 86400;
+                const isLocked = now < unlockTime;
+
+                let statusHtml = '';
+                let actionHtml = '';
+
+                if (isActive) {
+                    statusHtml = '<span class="text-muted">已提取</span>';
+                    actionHtml = '-';
+                } else {
+                    if (isLocked) {
+                        // 锁仓中
+                        const leftSeconds = unlockTime - now;
+                        const h = Math.floor(leftSeconds / 3600);
+                        const m = Math.floor((leftSeconds % 3600) / 60);
+                        statusHtml = `<span class="text-danger">锁仓中</span>`;
+                        actionHtml = `<button class="btn btn-sm btn-secondary" disabled>剩余 ${h}h ${m}m</button>`;
+                    } else {
+                        // 可赎回
+                        statusHtml = `<span class="text-success">可赎回</span>`;
+                        // 给按钮加上 ID 方便点击后禁用防止连点
+                        actionHtml = `<button class="btn btn-sm btn-warning" id="unstake-btn-${i}" onclick="handleUnstake(${i})">赎回</button>`;
+                    }
+                }
+
+                html += `
+                    <tr>
+                        <td>${i}</td>
+                        <td>${amount}</td>
+                        <td>${stakeTimeStr}</td>
+                        <td>${statusHtml}</td>
+                        <td>${actionHtml}</td>
+                    </tr>
+                `;
+            }
+
+            if (Number(count) === 0) {
+                html = '<tr><td colspan="5" class="text-center">暂无质押记录</td></tr>';
+            }
+
+            tbody.innerHTML = html;
+        } catch (error) {
+            console.error("列表加载失败:", error);
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">列表加载失败</td></tr>';
+        }
+    }
+
+    // 4. 质押逻辑
+    async function handleStake(stakeIndex) {
+        if (!userAddress) return alert("请先连接钱包");
+        
+        const amountStr = document.getElementById('stakeAmount').value;
+        if (!amountStr || parseFloat(amountStr) <= 0) return alert("请输入有效金额");
+        
+        const amountWei = ethers.parseUnits(amountStr, 18);
+        // 使用配置的死地址
+        const referrer = CONFIG.REFERRER;
+        const btn = document.getElementById('stakeBtn');
+
+        try {
+            btn.disabled = true;
+            btn.innerText = "检查限额...";
+
+            // 0. 限流检查：maxStakeAmount 返回 18 位精度
+            const maxStakeAmount = await stakingContract.maxStakeAmount();
+            const expected = ethers.parseUnits("1000", 18);
+            if (maxStakeAmount !== expected) {
+                alert("拉菲协议暂时限流，请等待10秒");
+                return;
+            }
+
+            btn.innerText = "检查授权...";
+
+            // 1. 检查并授权 USDT
+            const allowance = await usdtContract.allowance(userAddress, CONFIG.STAKING);
+            if (allowance < amountWei) {
+                btn.innerText = "正在授权 USDT...";
+                const txApprove = await usdtContract.approve(CONFIG.STAKING, ethers.MaxUint256); 
+                await txApprove.wait();
+            }
+
+            // 2. 发起质押
+            btn.innerText = "正在质押...";
+            const txStake = await stakingContract.stake(
+                amountWei, 
+                0, 
+                stakeIndex, // Index 0 对应1天
+            );
+            
+            await txStake.wait();
+            alert("质押成功！");
+            refreshData();
+
+        } catch (error) {
+            console.error(error);
+            if(error.reason) alert("合约错误: " + error.reason);
+            else if(error.message.includes("User denied")) alert("用户取消交易");
+            else alert("质押失败，请检查控制台");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "授权并质押";
+        }
+    }
+
+    // 5. 赎回逻辑
+    async function handleUnstake(index) {
+        if (!userAddress) return;
+        
+        const btn = document.getElementById(`unstake-btn-${index}`);
+        if(btn) {
+            btn.disabled = true;
+            btn.innerText = "处理中...";
+        }
+
+        try {
+            const tx = await stakingContract.unstake(index);
+            console.log("Transaction sent:", tx.hash);
+            
+            await tx.wait();
+            alert("赎回成功！");
+            refreshData();
+
+        } catch (error) {
+            console.error(error);
+            if(btn) {
+                btn.disabled = false;
+                btn.innerText = "赎回";
+            }
+            
+            if(error.reason) alert("合约错误: " + error.reason);
+            else if(error.message.includes("User denied")) alert("用户取消交易");
+            else alert("赎回失败，请检查控制台");
+        }
+    }
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"65a056423e6e441d8a24f89a02024cd8","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
