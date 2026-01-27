@@ -1,18 +1,39 @@
 {
-    "name": "drp-staking-dapp",
-    "version": "1.0.0",
-    "description": "DRP质押管理DApp",
-    "scripts": {
-        "dev": "python3 -m http.server 3000",
-        "deploy": "vercel --prod"
-    },
-    "keywords": ["staking", "dapp", "bsc", "defi"],
-    "author": "DRP Team",
-    "license": "MIT",
-    "devDependencies": {
-        "@vercel/static": "^1.0.0"
-    },
-    "engines": {
-        "node": ">=16.0.0"
-    }
+  "name": "drp-staking-dapp",
+  "version": "1.0.0",
+  "description": "DRP质押赎回DApp - 专为TP钱包和Vercel部署优化",
+  "main": "index.html",
+  "scripts": {
+    "dev": "serve .",
+    "build": "echo 'Static HTML build complete'",
+    "start": "serve .",
+    "test": "echo 'No tests specified'"
+  },
+  "keywords": [
+    "staking",
+    "defi",
+    "dapp",
+    "tp-wallet",
+    "web3",
+    "blockchain"
+  ],
+  "author": "DRP Staking Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/drp-staking-dapp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/drp-staking-dapp/issues"
+  },
+  "homepage": "https://drp-staking.vercel.app",
+  "dependencies": {
+    "web3": "^1.8.1"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
 }
