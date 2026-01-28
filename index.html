@@ -94,60 +94,6 @@
             font-size: 0.8rem;
         }
         .total-stats-card { border-left: 4px solid #3b82f6; }
-        .performance-card { border-left: 4px solid #10b981; }
-        .referral-card { border-left: 4px solid #f59e0b; }
-        
-        /* 推荐业绩样式 */
-        .performance-badge {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: bold;
-        }
-        
-        /* 推荐链接样式 */
-        .referral-link {
-            background-color: #1e293b;
-            border: 1px solid #334155;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        
-        .copy-btn {
-            margin-left: 10px;
-            padding: 4px 12px;
-            font-size: 0.8rem;
-        }
-        
-        /* 我的业绩列表样式 */
-        .referral-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid #334155;
-        }
-        
-        .referral-item:last-child {
-            border-bottom: none;
-        }
-        
-        /* 收益显示样式 */
-        .profit-badge {
-            background-color: #065f46;
-            color: #34d399;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: bold;
-        }
     </style>
 </head>
 <body>
@@ -203,15 +149,11 @@
         <div class="card-body">
             <h5 class="card-title mb-3">参与质押</h5>
             <div class="row g-3 align-items-end">
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <label class="form-label">质押金额 (USDT)</label>
                     <input type="number" class="form-control" id="stakeAmount" value="1000" placeholder="输入金额">
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label">推荐人地址 (可选)</label>
-                    <input type="text" class="form-control" id="referrerAddress" placeholder="0x..." value="">
-                </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <label class="form-label d-block">选择质押周期</label>
                     <div class="staking-btn-group">
                         <button class="btn btn-success" onclick="handleStake(0, 1)">1天</button>
@@ -235,9 +177,6 @@
                     <button class="nav-link active" id="my-stake-tab" data-bs-toggle="tab" data-bs-target="#my-stake" type="button" role="tab" aria-controls="my-stake" aria-selected="true">我的质押记录</button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="my-performance-tab" data-bs-toggle="tab" data-bs-target="#my-performance" type="button" role="tab" aria-controls="my-performance" aria-selected="false">我的业绩</button>
-                </li>
-                <li class="nav-item" role="presentation">
                     <button class="nav-link" id="all-stake-tab" data-bs-toggle="tab" data-bs-target="#all-stake" type="button" role="tab" aria-controls="all-stake" aria-selected="false">合约总质押记录</button>
                 </li>
             </ul>
@@ -248,7 +187,10 @@
                 <div class="tab-pane fade show active" id="my-stake" role="tabpanel" aria-labelledby="my-stake-tab">
                     <div class="d-flex justify-content-between align-items-center mb-3 mt-3">
                         <h5 class="card-title mb-0">我的质押记录</h5>
-                        <button class="btn btn-sm btn-outline-light" onclick="refreshData()">刷新数据</button>
+                        <div>
+                            <button class="btn btn-sm btn-outline-light" onclick="refreshData()">刷新数据</button>
+                            <button class="btn btn-sm btn-outline-info ms-2" onclick="toggleAutoRefresh()" id="autoRefreshBtn">自动刷新: 关闭</button>
+                        </div>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover">
@@ -267,80 +209,6 @@
                                 <tr><td colspan="7" class="text-center">请连接钱包查看数据</td></tr>
                             </tbody>
                         </table>
-                    </div>
-                </div>
-                
-                <!-- 我的业绩 -->
-                <div class="tab-pane fade" id="my-performance" role="tabpanel" aria-labelledby="my-performance-tab">
-                    <div class="d-flex justify-content-between align-items-center mb-3 mt-3">
-                        <h5 class="card-title mb-0">我的业绩</h5>
-                        <div>
-                            <button class="btn btn-sm btn-outline-light" onclick="refreshPerformanceData()">刷新业绩</button>
-                            <button class="btn btn-sm btn-outline-info ms-2" onclick="toggleAutoRefresh()" id="autoRefreshBtn">自动刷新: 关闭</button>
-                        </div>
-                    </div>
-                    
-                    <!-- 业绩统计 -->
-                    <div class="row mb-4 text-center g-2">
-                        <div class="col-6 col-md-3">
-                            <div class="card p-3 h-100">
-                                <div class="stat-label">直推人数</div>
-                                <div class="stat-value" id="directReferrals">0</div>
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <div class="card p-3 h-100">
-                                <div class="stat-label">团队总人数</div>
-                                <div class="stat-value" id="teamTotal">0</div>
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <div class="card p-3 h-100">
-                                <div class="stat-label">团队总质押</div>
-                                <div class="stat-value" id="teamTotalStake">0.0000</div>
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <div class="card p-3 h-100">
-                                <div class="stat-label">可提佣金</div>
-                                <div class="stat-value" id="availableCommission">0.0000</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 推荐人列表 -->
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <h5 class="card-title mb-3">我的推荐人列表</h5>
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>序号</th>
-                                            <th>地址</th>
-                                            <th>质押金额</th>
-                                            <th>质押周期</th>
-                                            <th>质押时间</th>
-                                            <th>状态</th>
-                                            <th>我的收益</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="referralListBody">
-                                        <tr><td colspan="7" class="text-center">暂无推荐人</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 团队树状图（简化版） -->
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title mb-3">团队结构</h5>
-                            <div id="teamStructure" class="text-center py-4">
-                                <div class="text-muted">团队结构图将在连接钱包后显示</div>
-                            </div>
-                        </div>
                     </div>
                 </div>
                 
@@ -425,14 +293,10 @@
         STAKING: "0x7E1882b471F627Ba75935BCb12105545Eb8b4227",
         USDT: "0x55d398326f99059fF775485246999027B3197955",
         PAIR: "0xAB71C14094575C6ec8f2e61C708D5f4A3c3d5ca0",
-        // 默认邀请人地址
-        REFERRER: "0x1D4a49d7572997Ea5b3FD21976177Dbe20661136",
-        // 佣金比例 (3%)
-        COMMISSION_RATE: 0.03,
         
         // 总质押记录相关配置
         TOTAL_STAKE_PAGE_SIZE: 10,  // 每页显示记录数
-        SAMPLE_USER_ADDRESSES: [  // 示例用户地址列表（实际应用中应从事件日志中获取）
+        SAMPLE_USER_ADDRESSES: [  // 示例用户地址列表
             "0x1234567890123456789012345678901234567890",
             "0x2345678901234567890123456789012345678901",
             "0x3456789012345678901234567890123456789012",
@@ -484,10 +348,6 @@
     let allStakeData = [];  // 存储所有质押记录
     let currentPage = 1;    // 当前页码
     let totalPages = 1;     // 总页数
-    
-    // 业绩相关变量
-    let myReferrals = [];   // 我的推荐人列表
-    let myReferrer = null;  // 我的推荐人地址
 
     // 工具：格式化金额为4位小数
     function formatAmount(wei) {
@@ -546,64 +406,6 @@
         if (!address) return '';
         return address.substring(0, 6) + '...' + address.substring(address.length - 4);
     }
-    
-    // 生成推荐链接
-    function generateReferralLink() {
-        if (!userAddress) return;
-        
-        const currentUrl = window.location.href.split('?')[0];
-        const referralLink = `${currentUrl}?ref=${userAddress}`;
-        document.getElementById('referralLinkText').textContent = referralLink;
-        
-        // 启用复制和分享按钮
-        document.getElementById('copyLinkBtn').disabled = false;
-        document.getElementById('shareLinkBtn').disabled = false;
-        
-        return referralLink;
-    }
-    
-    // 复制推荐链接
-    function copyReferralLink() {
-        const linkText = document.getElementById('referralLinkText').textContent;
-        navigator.clipboard.writeText(linkText).then(() => {
-            const btn = document.getElementById('copyLinkBtn');
-            const originalText = btn.textContent;
-            btn.textContent = '已复制';
-            btn.classList.remove('btn-outline-light');
-            btn.classList.add('btn-success');
-            
-            setTimeout(() => {
-                btn.textContent = originalText;
-                btn.classList.remove('btn-success');
-                btn.classList.add('btn-outline-light');
-            }, 2000);
-        }).catch(err => {
-            console.error('复制失败:', err);
-            alert('复制失败，请手动复制链接');
-        });
-    }
-    
-    // 分享推荐链接
-    function shareReferralLink() {
-        const linkText = document.getElementById('referralLinkText').textContent;
-        
-        if (navigator.share) {
-            navigator.share({
-                title: 'drp 质押推荐',
-                text: '快来参与drp质押，获取高额收益！',
-                url: linkText
-            }).then(() => {
-                console.log('分享成功');
-            }).catch(err => {
-                console.error('分享失败:', err);
-                // 如果分享失败，回退到复制
-                copyReferralLink();
-            });
-        } else {
-            // 如果浏览器不支持分享API，复制到剪贴板
-            copyReferralLink();
-        }
-    }
 
     // 1. 连接钱包
     async function connectWallet() {
@@ -626,10 +428,6 @@
 
             // 加载数据
             await refreshData();
-            await refreshPerformanceData();
-            
-            // 生成推荐链接
-            generateReferralLink();
         } catch (error) {
             console.error("连接失败:", error);
             alert("连接钱包失败");
@@ -805,10 +603,6 @@
         
         const amountWei = ethers.parseUnits(amountStr, 18);
         
-        // 获取推荐人地址
-        const referrerInput = document.getElementById('referrerAddress').value.trim();
-        const referrer = referrerInput || CONFIG.REFERRER;
-        
         // 获取所有质押按钮
         const buttons = document.querySelectorAll('.staking-btn-group .btn');
         const originalTexts = [];
@@ -844,29 +638,15 @@
 
             // 2. 发起质押
             currentBtn.textContent = "正在质押...";
-            
-            let txStake;
-            if (referrer && referrer !== "0x0000000000000000000000000000000000000000") {
-                // 使用推荐人质押
-                txStake = await stakingContract.stakeWithInviter(
-                    amountWei, 
-                    0, 
-                    stakeIndex,
-                    referrer
-                );
-            } else {
-                // 无推荐人质押
-                txStake = await stakingContract.stake(
-                    amountWei, 
-                    0, 
-                    stakeIndex
-                );
-            }
+            const txStake = await stakingContract.stake(
+                amountWei, 
+                0, 
+                stakeIndex
+            );
             
             await txStake.wait();
             alert(`质押成功！周期：${durationDays}天`);
             refreshData();
-            refreshPerformanceData();
 
         } catch (error) {
             console.error(error);
@@ -913,177 +693,7 @@
         }
     }
 
-    // 6. 刷新业绩数据
-    async function refreshPerformanceData() {
-        if (!userAddress) {
-            alert("请先连接钱包");
-            return;
-        }
-        
-        const btn = document.querySelector('button[onclick="refreshPerformanceData()"]');
-        if (btn) {
-            const originalText = btn.innerText;
-            btn.disabled = true;
-            btn.innerText = "加载中...";
-            
-            try {
-                // 模拟获取业绩数据
-                await simulatePerformanceData();
-                
-                // 渲染业绩数据
-                renderPerformanceData();
-                
-                btn.innerText = "刷新成功";
-                setTimeout(() => {
-                    btn.innerText = originalText;
-                    btn.disabled = false;
-                }, 1500);
-            } catch (error) {
-                console.error("获取业绩数据失败:", error);
-                btn.innerText = "刷新失败";
-                btn.disabled = false;
-            }
-        }
-    }
-    
-    // 模拟获取业绩数据
-    async function simulatePerformanceData() {
-        // 清空现有数据
-        myReferrals = [];
-        
-        // 模拟从合约或后端获取数据
-        // 这里我们使用示例数据来模拟
-        
-        // 示例推荐人数据
-        const sampleReferrals = [
-            {
-                address: "0x1234567890123456789012345678901234567890",
-                amount: ethers.parseUnits("5000", 18),
-                stakeTime: Math.floor(Date.now() / 1000) - 86400 * 2, // 2天前
-                isActive: false,
-                stakeIndex: 2, // 30天
-                referrer: userAddress
-            },
-            {
-                address: "0x2345678901234567890123456789012345678901",
-                amount: ethers.parseUnits("3000", 18),
-                stakeTime: Math.floor(Date.now() / 1000) - 86400 * 5, // 5天前
-                isActive: false,
-                stakeIndex: 1, // 15天
-                referrer: userAddress
-            },
-            {
-                address: "0x3456789012345678901234567890123456789012",
-                amount: ethers.parseUnits("2000", 18),
-                stakeTime: Math.floor(Date.now() / 1000) - 86400 * 10, // 10天前
-                isActive: true, // 已提取
-                stakeIndex: 0, // 1天
-                referrer: userAddress
-            },
-            {
-                address: "0x4567890123456789012345678901234567890123",
-                amount: ethers.parseUnits("8000", 18),
-                stakeTime: Math.floor(Date.now() / 1000) - 86400 * 1, // 1天前
-                isActive: false,
-                stakeIndex: 2, // 30天
-                referrer: userAddress
-            }
-        ];
-        
-        myReferrals = sampleReferrals;
-        
-        // 设置我的推荐人（从URL参数或本地存储获取）
-        const urlParams = new URLSearchParams(window.location.search);
-        const refParam = urlParams.get('ref');
-        if (refParam) {
-            myReferrer = refParam;
-            // 保存到本地存储
-            localStorage.setItem('myReferrer', refParam);
-        } else {
-            // 从本地存储获取
-            myReferrer = localStorage.getItem('myReferrer') || CONFIG.REFERRER;
-        }
-    }
-    
-    // 渲染业绩数据
-    function renderPerformanceData() {
-        // 计算总业绩
-        let totalPerformance = 0;
-        let referralCount = 0;
-        let totalCommission = 0;
-        
-        myReferrals.forEach(ref => {
-            if (!ref.isActive) { // 只计算未提取的
-                const amount = parseFloat(ethers.formatUnits(ref.amount, 18));
-                totalPerformance += amount;
-                referralCount++;
-                
-                // 计算佣金 (3%)
-                totalCommission += amount * CONFIG.COMMISSION_RATE;
-            }
-        });
-        
-        // 更新业绩统计
-        document.getElementById('totalPerformance').textContent = formatAmountTwoDecimals(ethers.parseUnits(totalPerformance.toString(), 18));
-        document.getElementById('referralCount').textContent = referralCount;
-        document.getElementById('estimatedCommission').textContent = formatAmountTwoDecimals(ethers.parseUnits(totalCommission.toString(), 18));
-        
-        // 显示我的推荐人
-        if (myReferrer) {
-            document.getElementById('myReferrer').textContent = shortenAddress(myReferrer);
-        } else {
-            document.getElementById('myReferrer').textContent = "无";
-        }
-        
-        // 更新详细业绩统计
-        document.getElementById('directReferrals').textContent = referralCount;
-        document.getElementById('teamTotal').textContent = referralCount + 5; // 模拟团队总数
-        document.getElementById('teamTotalStake').textContent = formatAmountTwoDecimals(ethers.parseUnits((totalPerformance * 1.5).toString(), 18)); // 模拟团队总质押
-        document.getElementById('availableCommission').textContent = formatAmountTwoDecimals(ethers.parseUnits((totalCommission * 0.8).toString(), 18)); // 模拟可提佣金
-        
-        // 渲染推荐人列表
-        renderReferralList();
-    }
-    
-    // 渲染推荐人列表
-    function renderReferralList() {
-        const tbody = document.getElementById('referralListBody');
-        
-        if (myReferrals.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center">暂无推荐人</td></tr>';
-            return;
-        }
-        
-        let html = '';
-        
-        myReferrals.forEach((ref, index) => {
-            const amount = formatAmount(ref.amount);
-            const stakeTimeStr = formatStakeTime(ref.stakeTime);
-            const durationLabel = STAKE_DURATION_LABELS[ref.stakeIndex] || "未知";
-            const status = ref.isActive ? "已提取" : "质押中";
-            const statusClass = ref.isActive ? "text-muted" : "text-success";
-            
-            // 计算我的收益 (3% 佣金)
-            const commission = parseFloat(ethers.formatUnits(ref.amount, 18)) * CONFIG.COMMISSION_RATE;
-            const commissionStr = commission.toFixed(2) + " USDT";
-            
-            html += `
-                <tr>
-                    <td>${index + 1}</td>
-                    <td><span class="address-short">${shortenAddress(ref.address)}</span></td>
-                    <td>${amount}</td>
-                    <td><span class="badge-duration">${durationLabel}</span></td>
-                    <td class="stake-time-cell">${stakeTimeStr}</td>
-                    <td class="status-cell"><span class="${statusClass}">${status}</span></td>
-                    <td class="text-success"><span class="profit-badge">${commissionStr}</span></td>
-                </tr>
-            `;
-        });
-        
-        tbody.innerHTML = html;
-    }
-
-    // 7. 刷新总质押数据
+    // 6. 刷新总质押数据
     async function refreshAllStakeData() {
         if (!stakingContract) {
             alert("请先连接钱包");
@@ -1282,12 +892,8 @@
         autoRefreshInterval = setInterval(async () => {
             if (userAddress) {
                 await refreshData();
-                // 如果当前在查看业绩记录，也刷新业绩数据
-                const activeTab = document.querySelector('#stakeTab .nav-link.active');
-                if (activeTab && activeTab.id === 'my-performance-tab') {
-                    await refreshPerformanceData();
-                }
                 // 如果当前在查看总质押记录，也刷新总质押数据
+                const activeTab = document.querySelector('#stakeTab .nav-link.active');
                 if (activeTab && activeTab.id === 'all-stake-tab') {
                     await refreshAllStakeData();
                 }
@@ -1338,4 +944,3 @@
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"65a056423e6e441d8a24f89a02024cd8","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
-
