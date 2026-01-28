@@ -34,10 +34,19 @@
         .table td { border-bottom: 1px solid #334155; vertical-align: middle; }
         input.form-control { background-color: #334155; border-color: #475569; color: white; }
         input.form-control:focus { background-color: #334155; color: white; border-color: #38bdf8; box-shadow: none; }
-        
-.align-items-end label.form-label {
-        color: wheat;
-}
+        .staking-btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        .staking-btn-group .btn { flex: 1; min-width: 120px; }
+        .badge-duration { background-color: #374151; color: #9ca3af; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; }
+        .countdown { 
+            font-family: 'Courier New', monospace; 
+            background-color: #1f2937; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-size: 0.85rem;
+            display: inline-block;
+        }
+        .countdown-locked { color: #f87171; }
+        .countdown-unlocked { color: #34d399; }
     </style>
 </head>
 <body>
@@ -87,22 +96,21 @@
         <div class="card-body">
             <h5 class="card-title mb-3">参与质押</h5>
             <div class="row g-3 align-items-end">
-                <div class="col-md-8">
+                <div class="col-md-6">
                     <label class="form-label">质押金额 (USDT)</label>
                     <input type="number" class="form-control" id="stakeAmount" value="1000" placeholder="输入金额">
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label d-block">操作</label>
-                    <button class="btn btn-success w-40" id="stakeBtn" onclick="handleStake(0)">
-                        授权并质押（1天）
-                    </button>
-                    <button class="btn btn-success w-40" id="stakeBtn" onclick="handleStake(1)">
-                        授权并质押（15天）
-                    </button>
+                <div class="col-md-6">
+                    <label class="form-label d-block">选择质押周期</label>
+                    <div class="staking-btn-group">
+                        <button class="btn btn-success" onclick="handleStake(0, 1)">1天</button>
+                        <button class="btn btn-success" onclick="handleStake(1, 15)">15天</button>
+                        <button class="btn btn-success" onclick="handleStake(2, 30)">30天</button>
+                    </div>
                 </div>
             </div>
             <div class="mt-2 small text-white">
-                * 质押周期为1天。
+                * 注意：不同质押周期的日化率和解锁时间不同
             </div>
         </div>
     </div>
@@ -112,7 +120,10 @@
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="card-title mb-0">我的质押记录</h5>
-                <button class="btn btn-sm btn-outline-light" onclick="refreshData()">刷新数据</button>
+                <div>
+                    <button class="btn btn-sm btn-outline-light" onclick="refreshData()">刷新数据</button>
+                    <button class="btn btn-sm btn-outline-info ms-2" onclick="autoRefresh()" id="autoRefreshBtn">自动刷新: 关闭</button>
+                </div>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover">
@@ -120,13 +131,15 @@
                         <tr>
                             <th>ID</th>
                             <th>金额 (USDT)</th>
+                            <th>质押周期</th>
                             <th>质押时间</th>
+                            <th>剩余时间</th>
                             <th>状态</th>
-                            <th>操作</th> <!-- 恢复操作列 -->
+                            <th>操作</th>
                         </tr>
                     </thead>
                     <tbody id="stakeListBody">
-                        <tr><td colspan="5" class="text-center">请连接钱包查看数据</td></tr>
+                        <tr><td colspan="7" class="text-center">请连接钱包查看数据</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -143,6 +156,19 @@
         //在此处修改邀请人地址
         REFERRER: "0x1D4a49d7572997Ea5b3FD21976177Dbe20661136" 
     };
+    
+    // 质押周期配置 (秒)
+    const STAKE_DURATIONS = {
+        0: 86400,      // 1天
+        1: 1296000,    // 15天 (15 * 86400)
+        2: 2592000     // 30天 (30 * 86400)
+    };
+    
+    const STAKE_DURATION_LABELS = {
+        0: "1天",
+        1: "15天", 
+        2: "30天"
+    };
     // ===========================================
 
     // ABIs
@@ -158,7 +184,7 @@
         "function balanceOf(address account) view returns (uint256)",
         "function stakeWithInviter(uint160 _amount, uint256 amountOutMin, uint8 _stakeIndex, address parent)",
         "function stake(uint160 _amount, uint256 amountOutMin, uint8 _stakeIndex)",
-        "function unstake(uint256 index)", // 必须包含 unstake 方法
+        "function unstake(uint256 index)",
         "function stakeCount(address user) view returns (uint256)",
         'function maxStakeAmount() view returns (uint256)',
         "function userStakeRecord(address user, uint256 index) view returns (uint40 stakeTime, uint160 amount, bool status, uint8 stakeIndex)"
@@ -167,11 +193,31 @@
     // 全局变量
     let provider, signer, userAddress;
     let stakingContract, usdtContract;
+    let autoRefreshInterval = null;
+    let countdownTimers = {};
 
     // 工具：格式化金额为4位小数
     function formatAmount(wei) {
         const val = ethers.formatUnits(wei, 18);
         return parseFloat(val).toFixed(0);
+    }
+
+    // 格式化时间：将秒转换为天、小时、分钟
+    function formatTimeRemaining(seconds) {
+        if (seconds <= 0) return "0秒";
+        
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        
+        let result = "";
+        if (days > 0) result += `${days}天`;
+        if (hours > 0) result += `${hours}小时`;
+        if (minutes > 0 && days === 0) result += `${minutes}分`;
+        if (secs > 0 && days === 0 && hours === 0) result += `${secs}秒`;
+        
+        return result || "0秒";
     }
 
     // 1. 连接钱包
@@ -195,6 +241,9 @@
 
             // 加载数据
             await refreshData();
+            
+            // 启动自动刷新
+            startAutoRefresh();
         } catch (error) {
             console.error("连接失败:", error);
             alert("连接钱包失败");
@@ -221,8 +270,7 @@
             const poolBal = await usdtContract.balanceOf(CONFIG.PAIR);
             document.getElementById('poolBalance').innerText = formatAmount(poolBal);
 
-
-            // 2.5 获取质押列表
+            // 2.4 获取质押列表
             await renderStakeList();
             btn.innerText = "刷新";
         } catch (error) {
@@ -235,13 +283,19 @@
     // 3. 渲染质押列表
     async function renderStakeList() {
         const tbody = document.getElementById('stakeListBody');
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center">加载中...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">加载中...</td></tr>';
 
         try {
             const count = await stakingContract.stakeCount(userAddress);
             let html = '';
             
             const now = Math.floor(Date.now() / 1000);
+
+            // 清空旧的倒计时定时器
+            Object.keys(countdownTimers).forEach(id => {
+                clearInterval(countdownTimers[id]);
+                delete countdownTimers[id];
+            });
 
             // 倒序显示
             for (let i = Number(count) - 1; i >= 0; i--) {
@@ -251,30 +305,46 @@
                 const stakeTime = Number(record[0]);
                 const stakeTimeStr = new Date(stakeTime * 1000).toLocaleString();
                 const isActive = record[2]; 
+                const stakeIndex = Number(record[3]);
+                const durationSeconds = STAKE_DURATIONS[stakeIndex] || 86400; // 默认为1天
                 
-                // 计算锁定状态
-                const unlockTime = stakeTime + 86400;
-                const isLocked = now < unlockTime;
-
+                // 计算解锁时间
+                const unlockTime = stakeTime + durationSeconds;
+                const timeRemaining = unlockTime - now;
+                
+                // 计算是否锁定
+                const isLocked = timeRemaining > 0 && !isActive;
+                const isUnlocked = timeRemaining <= 0 && !isActive;
+                
                 let statusHtml = '';
                 let actionHtml = '';
+                let timeRemainingHtml = '';
+                let durationLabel = STAKE_DURATION_LABELS[stakeIndex] || "未知";
 
                 if (isActive) {
                     statusHtml = '<span class="text-muted">已提取</span>';
                     actionHtml = '-';
+                    timeRemainingHtml = '<span class="text-muted">-</span>';
                 } else {
                     if (isLocked) {
                         // 锁仓中
-                        const leftSeconds = unlockTime - now;
-                        const h = Math.floor(leftSeconds / 3600);
-                        const m = Math.floor((leftSeconds % 3600) / 60);
-                        statusHtml = `<span class="text-danger">锁仓中</span>`;
-                        actionHtml = `<button class="btn btn-sm btn-secondary" disabled>剩余 ${h}h ${m}m</button>`;
-                    } else {
+                        statusHtml = '<span class="text-danger">锁仓中</span>';
+                        actionHtml = `<button class="btn btn-sm btn-secondary" disabled>等待解锁</button>`;
+                        
+                        // 创建倒计时显示元素
+                        timeRemainingHtml = `<span class="countdown countdown-locked" id="countdown-${i}">${formatTimeRemaining(timeRemaining)}</span>`;
+                        
+                        // 启动倒计时定时器
+                        startCountdown(i, timeRemaining);
+                    } else if (isUnlocked) {
                         // 可赎回
-                        statusHtml = `<span class="text-success">可赎回</span>`;
-                        // 给按钮加上 ID 方便点击后禁用防止连点
+                        statusHtml = '<span class="text-success">可赎回</span>';
                         actionHtml = `<button class="btn btn-sm btn-warning" id="unstake-btn-${i}" onclick="handleUnstake(${i})">赎回</button>`;
+                        timeRemainingHtml = '<span class="countdown countdown-unlocked">已解锁</span>';
+                    } else {
+                        statusHtml = '<span class="text-warning">未知</span>';
+                        actionHtml = '-';
+                        timeRemainingHtml = '-';
                     }
                 }
 
@@ -282,7 +352,9 @@
                     <tr>
                         <td>${i}</td>
                         <td>${amount}</td>
+                        <td><span class="badge-duration">${durationLabel}</span></td>
                         <td>${stakeTimeStr}</td>
+                        <td>${timeRemainingHtml}</td>
                         <td>${statusHtml}</td>
                         <td>${actionHtml}</td>
                     </tr>
@@ -290,33 +362,76 @@
             }
 
             if (Number(count) === 0) {
-                html = '<tr><td colspan="5" class="text-center">暂无质押记录</td></tr>';
+                html = '<tr><td colspan="7" class="text-center">暂无质押记录</td></tr>';
             }
 
             tbody.innerHTML = html;
         } catch (error) {
             console.error("列表加载失败:", error);
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">列表加载失败</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">列表加载失败</td></tr>';
         }
     }
 
+    // 启动倒计时定时器
+    function startCountdown(id, initialSeconds) {
+        let remaining = initialSeconds;
+        const countdownElement = document.getElementById(`countdown-${id}`);
+        
+        if (!countdownElement) return;
+        
+        const timer = setInterval(() => {
+            remaining--;
+            
+            if (remaining <= 0) {
+                clearInterval(timer);
+                // 刷新整个列表
+                refreshData();
+                return;
+            }
+            
+            if (countdownElement) {
+                countdownElement.textContent = formatTimeRemaining(remaining);
+                
+                // 更新倒计时颜色
+                if (remaining <= 3600) { // 小于1小时
+                    countdownElement.style.color = '#f87171'; // 红色
+                } else if (remaining <= 86400) { // 小于1天
+                    countdownElement.style.color = '#fbbf24'; // 黄色
+                } else {
+                    countdownElement.style.color = '#60a5fa'; // 蓝色
+                }
+            }
+        }, 1000);
+        
+        countdownTimers[id] = timer;
+    }
+
     // 4. 质押逻辑
-    async function handleStake(stakeIndex) {
+    async function handleStake(stakeIndex, durationDays) {
         if (!userAddress) return alert("请先连接钱包");
         
         const amountStr = document.getElementById('stakeAmount').value;
         if (!amountStr || parseFloat(amountStr) <= 0) return alert("请输入有效金额");
         
         const amountWei = ethers.parseUnits(amountStr, 18);
-        // 使用配置的死地址
         const referrer = CONFIG.REFERRER;
-        const btn = document.getElementById('stakeBtn');
-
+        
+        // 获取所有质押按钮
+        const buttons = document.querySelectorAll('.staking-btn-group .btn');
+        const originalTexts = [];
+        
         try {
-            btn.disabled = true;
-            btn.innerText = "检查限额...";
+            // 禁用所有质押按钮并保存原始文本
+            buttons.forEach(btn => {
+                originalTexts.push(btn.textContent);
+                btn.disabled = true;
+            });
+            
+            // 设置当前按钮的文本
+            const currentBtn = event.target;
+            currentBtn.textContent = "检查限额...";
 
-            // 0. 限流检查：maxStakeAmount 返回 18 位精度
+            // 0. 限流检查
             const maxStakeAmount = await stakingContract.maxStakeAmount();
             const expected = ethers.parseUnits("1000", 18);
             if (maxStakeAmount !== expected) {
@@ -324,26 +439,26 @@
                 return;
             }
 
-            btn.innerText = "检查授权...";
+            currentBtn.textContent = "检查授权...";
 
             // 1. 检查并授权 USDT
             const allowance = await usdtContract.allowance(userAddress, CONFIG.STAKING);
             if (allowance < amountWei) {
-                btn.innerText = "正在授权 USDT...";
+                currentBtn.textContent = "正在授权 USDT...";
                 const txApprove = await usdtContract.approve(CONFIG.STAKING, ethers.MaxUint256); 
                 await txApprove.wait();
             }
 
             // 2. 发起质押
-            btn.innerText = "正在质押...";
+            currentBtn.textContent = "正在质押...";
             const txStake = await stakingContract.stake(
                 amountWei, 
                 0, 
-                stakeIndex, // Index 0 对应1天
+                stakeIndex
             );
             
             await txStake.wait();
-            alert("质押成功！");
+            alert(`质押成功！周期：${durationDays}天`);
             refreshData();
 
         } catch (error) {
@@ -352,8 +467,11 @@
             else if(error.message.includes("User denied")) alert("用户取消交易");
             else alert("质押失败，请检查控制台");
         } finally {
-            btn.disabled = false;
-            btn.innerText = "授权并质押";
+            // 恢复所有按钮
+            buttons.forEach((btn, index) => {
+                btn.disabled = false;
+                btn.textContent = originalTexts[index];
+            });
         }
     }
 
@@ -387,9 +505,60 @@
             else alert("赎回失败，请检查控制台");
         }
     }
+
+    // 6. 自动刷新功能
+    function startAutoRefresh() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+        }
+        
+        autoRefreshInterval = setInterval(async () => {
+            if (userAddress) {
+                await refreshData();
+            }
+        }, 30000); // 每30秒刷新一次
+    }
+
+    function autoRefresh() {
+        const btn = document.getElementById('autoRefreshBtn');
+        
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+            autoRefreshInterval = null;
+            btn.textContent = "自动刷新: 关闭";
+            btn.classList.remove('btn-info');
+            btn.classList.add('btn-outline-info');
+        } else {
+            startAutoRefresh();
+            btn.textContent = "自动刷新: 开启";
+            btn.classList.remove('btn-outline-info');
+            btn.classList.add('btn-info');
+        }
+    }
+
+    // 页面卸载时清理定时器
+    window.addEventListener('beforeunload', () => {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+        }
+        Object.keys(countdownTimers).forEach(id => {
+            clearInterval(countdownTimers[id]);
+        });
+    });
+
+    // 初始连接钱包
+    window.addEventListener('load', () => {
+        if (typeof window.ethereum !== 'undefined') {
+            // 检查是否已连接
+            window.ethereum.request({ method: 'eth_accounts' })
+                .then(accounts => {
+                    if (accounts.length > 0) {
+                        connectWallet();
+                    }
+                });
+        }
+    });
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"65a056423e6e441d8a24f89a02024cd8","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
-
 </html>
-
