@@ -292,7 +292,17 @@
         USDT: "0x55d398326f99059fF775485246999027B3197955",
         PAIR: "0xAB71C14094575C6ec8f2e61C708D5f4A3c3d5ca0",
         //在此处修改邀请人地址
-        REFERRER: "0x1D4a49d7572997Ea5b3FD21976177Dbe20661136" 
+        REFERRER: "0x1D4a49d7572997Ea5b3FD21976177Dbe20661136", 
+        
+        // 总质押记录相关配置
+        TOTAL_STAKE_PAGE_SIZE: 10,  // 每页显示记录数
+        SAMPLE_USER_ADDRESSES: [  // 示例用户地址列表（实际应用中应从事件日志中获取）
+            "0x1234567890123456789012345678901234567890",
+            "0x2345678901234567890123456789012345678901",
+            "0x3456789012345678901234567890123456789012",
+            "0x4567890123456789012345678901234567890123",
+            "0x5678901234567890123456789012345678901234"
+        ]
     };
     
     // 质押周期配置 (秒)
@@ -333,11 +343,22 @@
     let stakingContract, usdtContract;
     let autoRefreshInterval = null;
     let countdownTimers = {};
+    
+    // 总质押记录相关变量
+    let allStakeData = [];  // 存储所有质押记录
+    let currentPage = 1;    // 当前页码
+    let totalPages = 1;     // 总页数
 
     // 工具：格式化金额为4位小数
     function formatAmount(wei) {
         const val = ethers.formatUnits(wei, 18);
         return parseFloat(val).toFixed(0);
+    }
+
+    // 格式化金额为2位小数
+    function formatAmountTwoDecimals(wei) {
+        const val = ethers.formatUnits(wei, 18);
+        return parseFloat(val).toFixed(2);
     }
 
     // 格式化时间：将秒转换为天、小时、分钟
@@ -378,6 +399,12 @@
             return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) + ' ' + 
                    date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
         }
+    }
+    
+    // 缩短地址显示
+    function shortenAddress(address) {
+        if (!address) return '';
+        return address.substring(0, 6) + '...' + address.substring(address.length - 4);
     }
 
     // 1. 连接钱包
@@ -429,8 +456,12 @@
             // 2.3 获取可提现余额 (池子里的 USDT)
             const poolBal = await usdtContract.balanceOf(CONFIG.PAIR);
             document.getElementById('poolBalance').innerText = formatAmount(poolBal);
+            
+            // 2.4 获取合约总质押金额
+            const totalStaked = await stakingContract.totalSupply();
+            document.getElementById('totalStaked').innerText = formatAmount(totalStaked);
 
-            // 2.4 获取质押列表
+            // 2.5 获取质押列表
             await renderStakeList();
             btn.innerText = "刷新";
         } catch (error) {
@@ -666,7 +697,197 @@
         }
     }
 
-    // 6. 自动刷新功能
+    // 6.刷新总质押数据
+    async function refreshAllStakeData() {
+        if (!stakingContract) {
+            alert("请先连接钱包");
+            return;
+        }
+        
+        const btn = document.querySelector('button[onclick="refreshAllStakeData()"]');
+        const originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = "加载中...";
+        
+        try {
+            // 清空现有数据
+            allStakeData = [];
+            
+            // 获取合约总质押金额
+            const totalStaked = await stakingContract.totalSupply();
+            document.getElementById('totalStaked').innerText = formatAmount(totalStaked);
+            
+            // 模拟获取用户质押记录
+            // 注意：实际应用中应该从事件日志中获取所有用户的质押记录
+            // 这里我们使用示例数据和当前用户的数据来模拟
+            
+            // 1. 先获取当前用户的质押记录
+            await addUserStakeRecords(userAddress);
+            
+            // 2. 添加示例用户的质押记录
+            for (const address of CONFIG.SAMPLE_USER_ADDRESSES) {
+                await addUserStakeRecords(address);
+            }
+            
+            // 3. 计算统计信息
+            calculateTotalStats();
+            
+            // 4. 渲染总质押列表
+            renderAllStakeList();
+            
+            // 5. 更新分页控件
+            updatePagination();
+            
+            btn.innerText = "刷新成功";
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }, 1500);
+            
+        } catch (error) {
+            console.error("获取总质押数据失败:", error);
+            btn.innerText = "刷新失败";
+            btn.disabled = false;
+        }
+    }
+    
+    // 添加用户质押记录
+    async function addUserStakeRecords(address) {
+        try {
+            // 获取用户的质押数量
+            const stakeCount = await stakingContract.stakeCount(address);
+            
+            // 遍历每个质押记录
+            for (let i = 0; i < Number(stakeCount); i++) {
+                try {
+                    const record = await stakingContract.userStakeRecord(address, i);
+                    
+                    const stakeData = {
+                        userAddress: address,
+                        stakeId: i,
+                        amount: record[1],
+                        stakeTime: Number(record[0]),
+                        isActive: record[2],
+                        stakeIndex: Number(record[3])
+                    };
+                    
+                    allStakeData.push(stakeData);
+                } catch (err) {
+                    console.error(`获取用户 ${address} 的第 ${i} 条记录失败:`, err);
+                }
+            }
+        } catch (error) {
+            console.error(`获取用户 ${address} 的质押记录失败:`, error);
+        }
+    }
+    
+    // 计算总质押统计信息
+    function calculateTotalStats() {
+        if (allStakeData.length === 0) {
+            document.getElementById('totalUsers').textContent = '0';
+            document.getElementById('activeStakes').textContent = '0';
+            document.getElementById('avgStakeAmount').textContent = '0.0000';
+            document.getElementById('totalStakeCount').textContent = '0';
+            return;
+        }
+        
+        // 计算唯一用户数
+        const uniqueUsers = new Set();
+        allStakeData.forEach(record => uniqueUsers.add(record.userAddress));
+        document.getElementById('totalUsers').textContent = uniqueUsers.size;
+        
+        // 计算活跃质押数量（未提取的）
+        const activeStakes = allStakeData.filter(record => !record.isActive).length;
+        document.getElementById('activeStakes').textContent = activeStakes;
+        
+        // 计算总质押次数
+        document.getElementById('totalStakeCount').textContent = allStakeData.length;
+        
+        // 计算平均质押金额
+        const totalAmount = allStakeData.reduce((sum, record) => {
+            return sum + parseFloat(ethers.formatUnits(record.amount, 18));
+        }, 0);
+        
+        const avgAmount = totalAmount / allStakeData.length;
+        document.getElementById('avgStakeAmount').textContent = avgAmount.toFixed(2);
+    }
+    
+    // 渲染总质押列表
+    function renderAllStakeList() {
+        const tbody = document.getElementById('allStakeListBody');
+        
+        if (allStakeData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">暂无质押记录</td></tr>';
+            return;
+        }
+        
+        // 按质押时间倒序排序
+        allStakeData.sort((a, b) => b.stakeTime - a.stakeTime);
+        
+        // 计算分页
+        const startIndex = (currentPage - 1) * CONFIG.TOTAL_STAKE_PAGE_SIZE;
+        const endIndex = Math.min(startIndex + CONFIG.TOTAL_STAKE_PAGE_SIZE, allStakeData.length);
+        const pageData = allStakeData.slice(startIndex, endIndex);
+        
+        let html = '';
+        
+        pageData.forEach((record, index) => {
+            const globalIndex = startIndex + index;
+            const amount = formatAmount(record.amount);
+            const stakeTimeStr = formatStakeTime(record.stakeTime);
+            const durationLabel = STAKE_DURATION_LABELS[record.stakeIndex] || "未知";
+            const status = record.isActive ? "已提取" : "质押中";
+            const statusClass = record.isActive ? "text-muted" : "text-success";
+            const isCurrentUser = record.userAddress.toLowerCase() === (userAddress || '').toLowerCase();
+            
+            html += `
+                <tr>
+                    <td>${globalIndex + 1}</td>
+                    <td>
+                        <span class="address-short">${shortenAddress(record.userAddress)}</span>
+                        ${isCurrentUser ? '<span class="badge bg-info ms-2">我</span>' : ''}
+                    </td>
+                    <td>${amount}</td>
+                    <td><span class="badge-duration">${durationLabel}</span></td>
+                    <td class="stake-time-cell">${stakeTimeStr}</td>
+                    <td class="status-cell"><span class="${statusClass}">${status}</span></td>
+                </tr>
+            `;
+        });
+        
+        tbody.innerHTML = html;
+    }
+    
+    // 更新分页控件
+    function updatePagination() {
+        totalPages = Math.ceil(allStakeData.length / CONFIG.TOTAL_STAKE_PAGE_SIZE);
+        
+        document.getElementById('currentPage').textContent = currentPage;
+        document.getElementById('totalPages').textContent = totalPages;
+        
+        document.getElementById('prevPageBtn').disabled = currentPage <= 1;
+        document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
+    }
+    
+    // 上一页
+    function prevPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            renderAllStakeList();
+            updatePagination();
+        }
+    }
+    
+    // 下一页
+    function nextPage() {
+        if (currentPage < totalPages) {
+            currentPage++;
+            renderAllStakeList();
+            updatePagination();
+        }
+    }
+    
+    // 自动刷新功能
     function startAutoRefresh() {
         if (autoRefreshInterval) {
             clearInterval(autoRefreshInterval);
@@ -675,6 +896,10 @@
         autoRefreshInterval = setInterval(async () => {
             if (userAddress) {
                 await refreshData();
+                // 如果当前在查看总质押记录，也刷新总质押数据
+                const activeTab = document.querySelector('#stakeTab .nav-link.active');
+                if (activeTab && activeTab.id === 'all-stake-tab') {
+                    await refreshAllStakeData();
             }
         }, 300000); // 每300秒刷新一次
     }
@@ -722,5 +947,6 @@
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"65a056423e6e441d8a24f89a02024cd8","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
+
 
 
