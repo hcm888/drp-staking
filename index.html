@@ -30,23 +30,44 @@
         .stat-value { font-size: 1.25rem; font-weight: bold; color: #38bdf8; }
         .stat-label { font-size: 0.85rem; color: #94a3b8; }
         .table { color: #cbd5e1; }
-        .table thead th { border-bottom: 1px solid #475569; color: #94a3b8; }
+        .table thead th { border-bottom: 1px solid #475569; color: #94a3b8; font-size: 0.8rem; }
         .table td { border-bottom: 1px solid #334155; vertical-align: middle; }
         input.form-control { background-color: #334155; border-color: #475569; color: white; }
         input.form-control:focus { background-color: #334155; color: white; border-color: #38bdf8; box-shadow: none; }
         .staking-btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
         .staking-btn-group .btn { flex: 1; min-width: 120px; }
-        .badge-duration { background-color: #374151; color: #9ca3af; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; }
+        .badge-duration { background-color: #374151; color: #9ca3af; padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; }
         .countdown { 
             font-family: 'Courier New', monospace; 
             background-color: #1f2937; 
-            padding: 4px 8px; 
-            border-radius: 4px; 
-            font-size: 0.85rem;
+            padding: 2px 6px; 
+            border-radius: 3px; 
+            font-size: 0.75rem;
             display: inline-block;
         }
         .countdown-locked { color: #f87171; }
         .countdown-unlocked { color: #34d399; }
+        .align-items-end label.form-label { color: wheat; }
+        
+        /* 新增：调整表格中特定列的字体大小 */
+        .stake-time-cell { font-size: 0.8rem; }
+        .remaining-time-cell { font-size: 0.8rem; }
+        .status-cell { font-size: 0.8rem; }
+        .action-cell { font-size: 0.8rem; }
+        
+        /* 调整ID和金额列的字体大小 */
+        .table td:first-child { font-size: 0.85rem; } /* ID列 */
+        .table td:nth-child(2) { font-size: 0.85rem; } /* 金额列 */
+        
+        /* 调整表格行高 */
+        .table tbody tr { height: 40px; }
+        
+        /* 调整操作按钮大小 */
+        .action-cell .btn-sm { 
+            padding: 0.15rem 0.4rem; 
+            font-size: 0.75rem; 
+            line-height: 1.2;
+        }
     </style>
 </head>
 <body>
@@ -56,7 +77,7 @@
     <div class="warning-box">
         <h5 class="text-danger fw-bold">⚠️ 特别说明</h5>
         <ol class="mb-0">
-            <li>这个资金盘每天日化0.5%，第一天锁仓，后面没有收益。</li>
+            <li>1天日化0.5%，15天日化0.8%，30天日化1.3%。</li>
             <li>要崩盘前2天以上，页面会关闭质押功能，并提示解押。</li>
             <li>提示崩盘可能一周以上才会崩盘，但是别赚最后一分钱。</li>
             <li>请用一个新的干净钱包来参与。</li>
@@ -218,6 +239,28 @@
         if (secs > 0 && days === 0 && hours === 0) result += `${secs}秒`;
         
         return result || "0秒";
+    }
+    
+ // 格式化质押时间：显示更简洁的时间格式
+    function formatStakeTime(timestamp) {
+        const date = new Date(timestamp * 1000);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        
+        // 如果是今天，显示时间
+        if (diffDays === 0) {
+            return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        } 
+        // 如果是昨天
+        else if (diffDays === 1) {
+            return '昨天 ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        }
+        // 如果是更早的时间
+        else {
+            return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) + ' ' + 
+                   date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        }
     }
 
     // 1. 连接钱包
@@ -435,7 +478,7 @@
             const maxStakeAmount = await stakingContract.maxStakeAmount();
             const expected = ethers.parseUnits("1000", 18);
             if (maxStakeAmount !== expected) {
-                alert("拉菲协议暂时限流，请等待10秒");
+                alert("协议暂时限流，请等待10秒");
                 return;
             }
 
@@ -562,3 +605,4 @@
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"65a056423e6e441d8a24f89a02024cd8","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
+
