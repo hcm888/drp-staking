@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset=“UTF-8”>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>drp 质押管理</title>
     <!-- 引入 Bootstrap 用于快速布局 -->
@@ -9,7 +9,7 @@
     <!-- 引入 Ethers.js V6 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        body { 背景颜色: #0f172a;颜色: #e2e8f0;字体族: 'Segoe UI', Tahoma, Geneva, Verdana, 无衬线字体; }
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .card { background-color: #1e293b; border: 1px solid #334155; }
         .card-title { color: #fff; }
         .btn-primary { background-color: #3b82f6; border: none; }
@@ -21,26 +21,26 @@
         .warning-box {
             background-color: #450a0a;
             border: 1px solid #ef4444;
-            颜色: #fca5a5;
+            color: #fca5a5;
             padding: 15px;
-            圆角: 8像素;
-            下边距: 20像素;
-            字体大小: 0.9rem;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
         }
         .stat-value { font-size: 1.25rem; font-weight: bold; color: #38bdf8; }
         .stat-label { font-size: 0.85rem; color: #94a3b8; }
         .table { color: #cbd5e1; }
         .table thead th { border-bottom: 1px solid #475569; color: #94a3b8; font-size: 0.8rem; }
         .table td { border-bottom: 1px solid #334155; vertical-align: middle; }
-        输入.form-control { 背景颜色: #334155; 边框颜色: #475569; 颜色: 白色; }
+        input.form-control { background-color: #334155; border-color: #475569; color: white; }
         input.form-control:focus { background-color: #334155; color: white; border-color: #38bdf8; box-shadow: none; }
-.staking-btn-group{display:flex;间隙10像素弹性换行}
+        .staking-btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
         .staking-btn-group .btn { flex: 1; min-width: 120px; }
         .badge-duration { background-color: #374151; color: #9ca3af; padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; }
-        .倒计时 { 
-            字体族: 快递 新, 等宽字体; 
+        .countdown { 
+            font-family: 'Courier New', monospace; 
             background-color: #1f2937; 
-            内边距: 2像素 6像素; 
+            padding: 2px 6px; 
             border-radius: 3px; 
             font-size: 0.75rem;
             display: inline-block;
@@ -60,40 +60,40 @@
         .table td:nth-child(2) { font-size: 0.85rem; } /* 金额列 */
         
         /* 调整表格行高 */
-        .表格 tbody 行 { 高度: 40像素; }
+        .table tbody tr { height: 40px; }
         
         /* 调整操作按钮大小 */
         .action-cell .btn-sm { 
             padding: 0.15rem 0.4rem; 
             font-size: 0.75rem; 
-            行高: 1.2;
+            line-height: 1.2;
         }
-        
+       
         /* 新添加的样式 */
         .nav-tabs { border-bottom: 1px solid #334155; }
         .nav-tabs .nav-link { 
-            颜色: #94a3b8;
-            边框: 1像素 实线 透明;
+            color: #94a3b8; 
+            border: 1px solid transparent;
             border-radius: 0.375rem 0.375rem 0 0;
         }
         .nav-tabs .nav-link:hover { 
-            颜色: #cbd5e1;
-            边框颜色: #475569;
+            color: #cbd5e1; 
+            border-color: #475569;
         }
         .nav-tabs .nav-link.active { 
             color: #38bdf8; 
             background-color: #1e293b; 
-            边框颜色: #475569 #475569 #1e293b;
+            border-color: #475569 #475569 #1e293b;
         }
         .tab-content { padding-top: 1rem; }
         .address-short { 
-            字体族: 快递 新, 等宽字体; 
+            font-family: 'Courier New', monospace; 
             background-color: #1f2937; 
-            内边距: 2像素 6像素; 
+            padding: 2px 6px; 
             border-radius: 3px; 
-            字体大小: 0.8rem;
+            font-size: 0.8rem;
         }
-        .total-stats-card { border-left: 4px solid #3b82f6; }        
+        .total-stats-card { border-left: 4px solid #3b82f6; }
     </style>
 </head>
 <body>
@@ -134,6 +134,12 @@
             <div class="card p-3 h-100">
                 <div class="stat-label">可提现 USDT (池子)</div>
                 <div class="stat-value" id="poolBalance">0.0000</div>
+            </div>
+        </div>
+        </div class="col-6 col-md-3">
+            <div class="card p-3 h-100 total-stats-card">
+                <div class="stat-label">合约总质押</div>
+                <div class="stat-value" id="totalStaked">0.0000</div>
             </div>
         </div>
     </div>
@@ -284,13 +290,6 @@
             return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) + ' ' + 
                    date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
         }
-    }
-
-        
-    // 缩短地址显示
-    function shortenAddress(address) {
-        if (!address) return '';
-        return address.substring(0, 6) + '...' + address.substring(address.length - 4);
     }
 
     // 1. 连接钱包
@@ -450,12 +449,12 @@
         let remaining = initialSeconds;
         const countdownElement = document.getElementById(`countdown-${id}`);
         
-        如果 (!countdownElement) 返回;
+        if (!countdownElement) return;
         
         const timer = setInterval(() => {
             remaining--;
             
-            如果 (剩余 <= 0) {
+            if (remaining <= 0) {
                 clearInterval(timer);
                 // 刷新整个列表
                 refreshData();
@@ -635,7 +634,4 @@
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"65a056423e6e441d8a24f89a02024cd8","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
-
-
-
 
