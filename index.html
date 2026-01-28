@@ -198,58 +198,6 @@
         </div>
     </div>
 
-    <!-- 我的业绩面板 -->
-    <div class="row mb-4 text-center g-2">
-        <div class="col-6 col-md-3">
-            <div class="card p-3 h-100 performance-card">
-                <div class="stat-label">我的总业绩</div>
-                <div class="stat-value" id="totalPerformance">0.0000</div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card p-3 h-100 performance-card">
-                <div class="stat-label">推荐人数</div>
-                <div class="stat-value" id="referralCount">0</div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card p-3 h-100 performance-card">
-                <div class="stat-label">预计佣金</div>
-                <div class="stat-value" id="estimatedCommission">0.0000</div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card p-3 h-100 referral-card">
-                <div class="stat-label">我的邀请人</div>
-                <div class="stat-value" id="myReferrer">无</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 推荐链接区域 -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="card-title mb-3">我的推荐链接</h5>
-            <div class="row g-3 align-items-center">
-                <div class="col-md-8">
-                    <div class="referral-link">
-                        <span id="referralLinkText">请先连接钱包生成推荐链接</span>
-                        <button class="btn btn-sm btn-outline-light copy-btn" onclick="copyReferralLink()" id="copyLinkBtn" disabled>复制</button>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="d-flex justify-content-end">
-                        <button class="btn btn-sm btn-outline-info me-2" onclick="shareReferralLink()" id="shareLinkBtn" disabled>分享</button>
-                        <button class="btn btn-sm btn-outline-success" onclick="refreshPerformanceData()">刷新业绩</button>
-                    </div>
-                </div>
-            </div>
-            <div class="mt-2 small text-white">
-                * 分享此链接邀请好友质押，可获得好友质押金额3%的佣金奖励
-            </div>
-        </div>
-    </div>
-
     <!-- 质押操作区域 -->
     <div class="card mb-4">
         <div class="card-body">
@@ -261,7 +209,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">推荐人地址 (可选)</label>
-                    <input type="text" class="form-control" id="referrerAddress" placeholder="0x..." value="0x1D4a49d7572997Ea5b3FD21976177Dbe20661136">
+                    <input type="text" class="form-control" id="referrerAddress" placeholder="0x..." value="">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label d-block">选择质押周期</label>
@@ -1390,3 +1338,4 @@
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"65a056423e6e441d8a24f89a02024cd8","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
+
