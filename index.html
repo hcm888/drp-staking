@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
+    <meta charset=“UTF-8”>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>drp 质押管理</title>
     <!-- 引入 Bootstrap 用于快速布局 -->
@@ -9,7 +9,7 @@
     <!-- 引入 Ethers.js V6 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { 背景颜色: #0f172a;颜色: #e2e8f0;字体族: 'Segoe UI', Tahoma, Geneva, Verdana, 无衬线字体; }
         .card { background-color: #1e293b; border: 1px solid #334155; }
         .card-title { color: #fff; }
         .btn-primary { background-color: #3b82f6; border: none; }
@@ -21,26 +21,26 @@
         .warning-box {
             background-color: #450a0a;
             border: 1px solid #ef4444;
-            color: #fca5a5;
+            颜色: #fca5a5;
             padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
+            圆角: 8像素;
+            下边距: 20像素;
+            字体大小: 0.9rem;
         }
         .stat-value { font-size: 1.25rem; font-weight: bold; color: #38bdf8; }
         .stat-label { font-size: 0.85rem; color: #94a3b8; }
         .table { color: #cbd5e1; }
         .table thead th { border-bottom: 1px solid #475569; color: #94a3b8; font-size: 0.8rem; }
         .table td { border-bottom: 1px solid #334155; vertical-align: middle; }
-        input.form-control { background-color: #334155; border-color: #475569; color: white; }
+        输入.form-control { 背景颜色: #334155; 边框颜色: #475569; 颜色: 白色; }
         input.form-control:focus { background-color: #334155; color: white; border-color: #38bdf8; box-shadow: none; }
-        .staking-btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+.staking-btn-group{display:flex;间隙10像素弹性换行}
         .staking-btn-group .btn { flex: 1; min-width: 120px; }
         .badge-duration { background-color: #374151; color: #9ca3af; padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; }
-        .countdown { 
-            font-family: 'Courier New', monospace; 
+        .倒计时 { 
+            字体族: 快递 新, 等宽字体; 
             background-color: #1f2937; 
-            padding: 2px 6px; 
+            内边距: 2像素 6像素; 
             border-radius: 3px; 
             font-size: 0.75rem;
             display: inline-block;
@@ -60,38 +60,38 @@
         .table td:nth-child(2) { font-size: 0.85rem; } /* 金额列 */
         
         /* 调整表格行高 */
-        .table tbody tr { height: 40px; }
+        .表格 tbody 行 { 高度: 40像素; }
         
         /* 调整操作按钮大小 */
         .action-cell .btn-sm { 
             padding: 0.15rem 0.4rem; 
             font-size: 0.75rem; 
-            line-height: 1.2;
+            行高: 1.2;
         }
         
         /* 新添加的样式 */
         .nav-tabs { border-bottom: 1px solid #334155; }
         .nav-tabs .nav-link { 
-            color: #94a3b8; 
-            border: 1px solid transparent;
+            颜色: #94a3b8;
+            边框: 1像素 实线 透明;
             border-radius: 0.375rem 0.375rem 0 0;
         }
         .nav-tabs .nav-link:hover { 
-            color: #cbd5e1; 
-            border-color: #475569;
+            颜色: #cbd5e1;
+            边框颜色: #475569;
         }
         .nav-tabs .nav-link.active { 
             color: #38bdf8; 
             background-color: #1e293b; 
-            border-color: #475569 #475569 #1e293b;
+            边框颜色: #475569 #475569 #1e293b;
         }
         .tab-content { padding-top: 1rem; }
         .address-short { 
-            font-family: 'Courier New', monospace; 
+            字体族: 快递 新, 等宽字体; 
             background-color: #1f2937; 
-            padding: 2px 6px; 
+            内边距: 2像素 6像素; 
             border-radius: 3px; 
-            font-size: 0.8rem;
+            字体大小: 0.8rem;
         }
         .total-stats-card { border-left: 4px solid #3b82f6; }        
     </style>
@@ -169,7 +169,7 @@
                 <h5 class="card-title mb-0">我的质押记录</h5>
                 <div>
                     <button class="btn btn-sm btn-outline-light" onclick="refreshData()">刷新数据</button>
-                    <button class="btn btn-sm btn-outline-info ms-2" onclick="autoRefresh()" id="autoRefreshBtn">自动刷新: 关闭</button>
+
                 </div>
             </div>
             <div class="table-responsive">
@@ -453,12 +453,12 @@
         let remaining = initialSeconds;
         const countdownElement = document.getElementById(`countdown-${id}`);
         
-        if (!countdownElement) return;
+        如果 (!countdownElement) 返回;
         
         const timer = setInterval(() => {
             remaining--;
             
-            if (remaining <= 0) {
+            如果 (剩余 <= 0) {
                 clearInterval(timer);
                 // 刷新整个列表
                 refreshData();
@@ -638,5 +638,6 @@
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"65a056423e6e441d8a24f89a02024cd8","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
+
 
 
