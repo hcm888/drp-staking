@@ -1,40 +1,13 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    }
-  ],
   “重写”: 
     {
       "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data:; connect-src 'self' https: wss:;"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        }
-      ]
-    }
-  ],
-  "cleanUrls": true,
-  "trailingSlash": false
+  "outputDirectory": ".",
+  "buildCommand": null,
+  "devCommand": null,
+  "installCommand": null
 }
